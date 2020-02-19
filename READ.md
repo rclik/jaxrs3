@@ -196,5 +196,40 @@ Burada gelen request lerin header larini aliyorsunuz.
 Bunu @Context den de alabiliriz. @Context HttpHeaders headers
 Ya da @HeaderParam("header-name") i kullanarak da alabilirsin.
 
+Cookie Islemleri
 
+normalde yapildigi gibi http request i uzerinden de cookie islemleri yapilabilir ama, jaxrs sagladigi yontemleri de kullanabiliriz.
+CookieParam ann. kullanarak cookie de alabliriz.
+
+ilk olarak cookie ekleyelim. burada dikkat etmemiz gereken sey ise artik method larimiz String yerine javax.ws.rs.core.Response donmesi
+gerekiyor. cunku cookie ler Response object i icinde tutulurlar.
+
+Hatirlatmak da fayda var. Cookie leri domain e gore, path ine gore verebilirsin. cookie lerin version unu da verebilirsin.
+
+@BeanParam
+
+Soyle bir durum dusun. Bir java object ini URL uzerinden alman gerektigi durumlar olabilir. O zaman bir method da birden fazla annotation
+ile bu data lari almak yerine BeanParam ann. ini kullanarak URL deki data yi kullanarak o object e atanmasini saglayabilirsin.
+
+product/getProductById/computer?id=100 
+mesela burada product urunumuz var. biz onu category si ve id bilgisiyle almak istiyoruz. method umuzu tasarlarken bu data lari farkli fakli 
+map lemek yerine @BeanParam kullanarak istenilen map lemeyi yapabiliz. 
+BeanParam ile yapilabilecek map lemeler:
+    @CookieParam
+    @FormParam
+    @HeaderParam
+    @MatrixParam
+    @PathParam
+    @QueryParam
+Bunun avantaji ise resource method larinin okunmasini ve yazilmasini kolaylastirarak, URL uzerinden gelen data nin bean ile inject edilmesini
+saglamaktir.
+
+@DefaultValue Annotation i
+@DefaultValue Annotation i @*Param olarak gecen diger tum JaxRs annotation larinin eger value lari yoksa default degerlerini atar.
+oldukca basit bir uygulama.
+
+@Encoded
+    matrix query ve diger form parametrelerinin icin http spec lerine gore encode edilmesi icin kullanilir.
+    bu parametreyi class, method ve parametre seviyesinde kullanilabilir.
+    
 

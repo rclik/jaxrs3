@@ -1,5 +1,7 @@
 package com.rcelik.jaxrs.application;
 
+import com.rcelik.jaxrs.annotation.cookie.UserResource;
+import com.rcelik.jaxrs.annotation.defaultvalue.AnimalResource;
 import com.rcelik.jaxrs.annotation.formparams.PersonResource;
 import com.rcelik.jaxrs.annotation.headerparam.LoginResource;
 import com.rcelik.jaxrs.annotation.matrixParam.CarResource;
@@ -29,6 +31,8 @@ public class RestApplication extends Application {
         singletons.add(new BookResource());
         singletons.add(new PersonResource());
         singletons.add(new LoginResource());
+        singletons.add(new UserResource());
+        singletons.add(new AnimalResource());
     }
 
     @Override
