@@ -1,13 +1,18 @@
 package com.rcelik.jaxrs.application;
 
+import com.rcelik.jaxrs.annotation.context.ContextResource;
 import com.rcelik.jaxrs.annotation.cookie.UserResource;
 import com.rcelik.jaxrs.annotation.defaultvalue.AnimalResource;
+import com.rcelik.jaxrs.annotation.encoded.EmployeeResource;
+import com.rcelik.jaxrs.annotation.entityprovider.ProviderResource;
 import com.rcelik.jaxrs.annotation.formparams.PersonResource;
 import com.rcelik.jaxrs.annotation.headerparam.LoginResource;
+import com.rcelik.jaxrs.objecttransformation.jaxb.PersonXmlResource;
 import com.rcelik.jaxrs.annotation.matrixParam.CarResource;
 import com.rcelik.jaxrs.annotation.path.ShoppingStoreResource;
 import com.rcelik.jaxrs.annotation.pathparam.CustomerResource;
 import com.rcelik.jaxrs.annotation.queryparam.BookResource;
+import com.rcelik.jaxrs.objecttransformation.jettison.exception.mapper.NotFoundExceptionMapper;
 import com.rcelik.jaxrs.services.message.RestMessageController;
 
 import javax.ws.rs.ApplicationPath;
@@ -33,6 +38,15 @@ public class RestApplication extends Application {
         singletons.add(new LoginResource());
         singletons.add(new UserResource());
         singletons.add(new AnimalResource());
+        singletons.add(new EmployeeResource());
+        singletons.add(new ContextResource());
+        singletons.add(new ProviderResource());
+        singletons.add(new PersonXmlResource());
+        singletons.add(new com.rcelik.jaxrs.objecttransformation.jaxb.CustomerResource());
+        singletons.add(new com.rcelik.jaxrs.objecttransformation.jackson.PersonResource());
+        singletons.add(new com.rcelik.jaxrs.objecttransformation.jackson.CustomerResource());
+        singletons.add(new com.rcelik.jaxrs.objecttransformation.jettison.CustomerResource());
+        singletons.add(new NotFoundExceptionMapper());
     }
 
     @Override

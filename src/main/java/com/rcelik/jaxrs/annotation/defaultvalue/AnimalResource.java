@@ -2,8 +2,6 @@ package com.rcelik.jaxrs.annotation.defaultvalue;
 
 import javax.ws.rs.*;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Path("/animal")
 public class AnimalResource {

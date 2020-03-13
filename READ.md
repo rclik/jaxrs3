@@ -1,36 +1,70 @@
-Simdi bir de web deployment descriptor 3 ile yapalim. Yani Java Servlet 3.0 api ve sonrasinda bu var. Bir application i belirtmek icin Application class inin basina
-@ApplicationPath annotation ini kullanicaz.
-Sadece application path yetmez ama, bir de annotation lari arama yapmasi icin bir kod girmemiz gerekiyor. onu da ayni servlet api yi rest easy nin implement ettigi gibi servlet 
-initialization ini da implement ettigi bir library uzerinden yapicagiz.
+# Deployment Descriptor 3 Ile JAX-RS Uygulamasi Yazilmasi
 
-simdi ise koyulalim;
+Java Servlet 3.0 api ve sonrasinda Deployment Descriptor 3. versiyonu ile web.xml e gerek kalmadan JAX-RS uygulamasi
+yazilabilir. Bu versiyonda annotation lar ve ve bazi ozel class lar kullanilarak web.xml de yapilan tanimlamalari 
+programatik olarak tanimlayabiliriz. 
 
-ilk olarak root resource umuzu yazalim, bu ayni degisen birsey yok.
+## JAX-RS Uygulamasinin Tanitilmasi
+Uygulamanin icindeki ozel class lari tanimlamak icin bir application class i yazilir. Bu class in basina 
+**javax.ws.rs.ApplicationPath** annotation eklenir. Bu sekide Java servlet container ayaga kalkarken bu class in 
+varligindan haberdar olur. Ve onu ayaga kaldirir.
 
-sonrasinda application i tanitacagimiz class i da yazalim. ama bu kere uzerine @ApplicationPath annotation ini kullanalim:
+Ayrica web.xml de tanimladigimiz servlet vb. servlet api elemanlarini tanimlayabilmemiz icin class 
+**import javax.ws.rs.core.Application** class ini extend etmelidir. Bu class in bazi method larini override ederek
+servlet api elemanlarini tanimlayabiliriz.
 
-    //@ApplicationPath("/") OK
-    //@ApplicationPath("/*") Don't use /*
-    //@ApplicationPath("/root-path/*") Don't use /*
-    @ApplicationPath("/root-path")
+Application class inin servlet container (RestEasy implementation) tarafindan aranmasi icin ise RestEasy nin bir 
+dependency (servlet-initializer) sinin eklenmesi lazim. Yoksa servlet container initialize olurken annotation lari aramadigindan application
+class imizi ayaga kaldirmaz:
+
+    ...
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-servlet-initializer</artifactId>
+            <version>${resteasy.version}</version>
+        </dependency>
+    ...
+
+Simdi ise ilk olarak application class imizi yazalim:
+
+    @ApplicationPath("/")
     public class RestApplication extends Application {
-    
-        Set<Object> singletons = new HashSet<>();
-    
-        public RestApplication() {
-            singletons.add(new RestMessageController());
-        }
-    
-        @Override
-        public Set<Object> getSingletons() {
-            return singletons;
-        }
     }
- 
- root context i verirken dikkat etmemiz gereken seyler var:
-    tum url lere bakmamasi lazim, onun icin /* i kullanmamak lazim ne kadar erken birakirsak o kadar iyi, yoksa bir diger resource lar icin de aramaya devam edicek
-    ayni sekilde bir path ve sonrasindaki tum sub path leri de aramasina izin vermemeliyiz. ayni mantikla; /path/* kullanma
-    
+
+Bu sekilde, servlet container ayaga kalkarken uygulamamiz ayaga kaldirilir.
+
+Uygulamamiza bir context verebiliriz. Bu sekilde uygulamamizi ayni servlet container uzerinde baska uygulamalardan
+ayiran bir context e sahip oluruz. su sekilde calisir:
+> http://localhost:8080/rootContext/applicationContext/resource ...
+
+Yani ilk olarak servlet in context i geliyor, buna root context diyebiliriz. Olmak zorunda degildir. Sonrasinda ise 
+application imizin context i gelir. 
+
+Application context ini tanimlarken dikkat edilmesi gereken durumlar vardir:
+* tum url (/*) lere izin verilmemelidir, cunku diger application larla cakisabilir. Ayrica url in alt uzantilari icin de
+calisacaktir. O zaman application context inin altindaki tum url lere de izin vermemeliyiz.
+* application context i altindaki tum url lere de izin verilmemeli. (/applicationContext/*) 
+* ya hic verilmemeli, (/ veya hic) veya sadece application context i verilmeli. 
+
+Genel olarak ne kadar az izin verilirse o kadar uygulamayi kontrolumuz altinda almis oluruz:
+
+     // @ApplicationPath("/") OK
+     // @ApplicationPath("/*") Don't use /*
+     // @ApplicationPath("/root-path/*") Don't use /*
+     @ApplicationPath("/root-path")
+     public class RestApplication extends Application {
+         Set<Object> singletons = new HashSet<>();
+     
+         public RestApplication() {
+             singletons.add(new RestMessageController());
+         }
+     
+         @Override
+         public Set<Object> getSingletons() {
+             return singletons;
+         }
+     }
+
 @Path annotation i 
 HTTP istegi ile resource lari birbirleriyle baglanmasini saglayan annotation idir.
 
@@ -229,7 +263,233 @@ saglamaktir.
 oldukca basit bir uygulama.
 
 @Encoded
-    matrix query ve diger form parametrelerinin icin http spec lerine gore encode edilmesi icin kullanilir.
+    http query, path ve matrix parametrelerini HTTP spec lerine gore encode eder. @Encode parametresi ise encode edilmis
+    parametre degerlerinin decode edilmesini engeller. bazen bu sekilde parametreler isimize yarayabilir.
     bu parametreyi class, method ve parametre seviyesinde kullanilabilir.
+    Kullanimi ise basit, sadece parametrenin basina @Encoded
     
+    
+@Context Annotation
+
+Context annotation i ile asagidaki object leri inject edebilirsin:
+    javax.ws.rs.core.HttpHeaders
+    javax.ws.rs.core.UriInfo
+    javax.ws.rs.core.Request
+    javax.servlet.http.HttpServletRequest
+    javax.servlet.http.HttpServletResponse
+    javax.servlet.ServletConfig
+    javax.servlet.ServletContext
+    javax.ws.rs.core.SecurityContext
+Bunlar goruldugu gibi http request response servlet config leri context leri security context i gibi bilgileri alabilmek
+icin kullanilirlar.
+
+bunlari kullanabilmek icin project imizde servlet-api dependency lerinin eklenmesi gerekir:
+
+    <properties>
+    .....
+    <servlet.version>3.1.0</servlet.version>
+    </properties>
+    ...
+    <!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
+    <dependency>
+        <groupId>javax.servlet</groupId>
+        <artifactId>javax.servlet-api</artifactId>
+        <version>${servlet.version}</version>
+    </dependency>
+
+bu sekilde servlet api eklenmis oldu.
+
+
+Standard Entity Providers
+    Entity Provider lari http request ve response larin body lerinin olusturulmasinda kullanilirlar.
+    Request icin MessageBodyReader response icin MessageBodyWriter kullanilir.
+    Provider lar sunlardir:
+    
+    byte[]                  — All media types (*/*)
+    java.lang.String        — All text media types (text/*)
+    java.io.InputStream     — All media types (*/*)
+    java.io.Reader          — All media types (*/*)
+    java.io.File            — All media types (*/*)
+    javax.activation.DataSource — All media types (*/*)
+    javax.xml.transform.Source — XML types (text/xml, application/xml and application/*+xml)
+    javax.xml.bind.JAXBElement and application-supplied JAXB classes XML media types (text/xml, application/xml and application/*+xml)
+    MultivaluedMap<String, String> — Form content (application/x-www-form-urlencoded)
+    StreamingOutput — All media types (*/*), MessageBodyWriter only
+
+herbir tip icin farkli media type header i kullanilir. bunlara dikkat etmekte fayda var.
+response lar bir stream olarak verilebilirler, bu sekilde file da response a koyabiliriz.
+
+Ilk olarak StreamOutput interface ini kullanalim, bu bir stream ve http response header olarak da text_plain eklememiz gerekir.
+default olarak text/html;charset=UTF-8 olarak geliyor, biz ekleigimiz de ise text/plain;charset=UTF-8 olarak degistigini gormus olduk
+
+Entity Providers olarak byte array kullanabiliriz. tum media type lari icin kullanilabilir.
+
+vb isler icin kullanilir.
+
+
+JAXB ve XML
+    JAXB Java Architecture for XML binding olarak acilir.
+    JAX-RS de JAXB kullanarak xml body ler donulebilir veya xml body ler alinabilir, server tarafindan.
+    xml icerigi java object ine cevirme islemine unmarshalling, java object i xml e cevirme islemine marshalling denir.
+
+bu islemleri yapmak icin rest easy ye bir dependency eklemek lazim:
+
+        <dependency>
+        	<groupId>org.jboss.resteasy</groupId>
+        	<artifactId>resteasy-jaxb-provider</artifactId>
+        	<version>${resteasy.version}</version>
+        </dependency>
+        
+bunu eklemezsen soyle bir hata alirsin: Could not find MessageBodyWriter for response object of type
+
+bu islemler bittikten sonra eger produces annotation i eklemzsek http response header Content-Type: application/xml;charset=UTF-8
+sekilde eklenmis olur. Produces (MediaType.APPLICATION_XML) eklersen de aynisi olur application/xml;charset=UTF-8
+
+XML e donusturecek object in bazi parametreleri:
+
+    ...
+    @XmlRootElement(name = "person")
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public class Person {
+    
+        @XmlElement
+    ...
+
+XmlRootElement -> response da donecek xml in root tag name icin kullanilir.
+XmlAccessType -> response da donecek xml in object in nesi kullanilarak generate edilecegini soylemek icin kullanilir.
+XmlElement -> hangi field in donusturulecegini yazmak icin kullanilir.
+XmlTransient -> ise hangi field in gosterilmeyecegini belirtmek icin kullanilir.
+
+JSON and Jackson
+
+java object inin json a cevirilmesi ve tam tersini yapabilmek icin jackson provider library sini kullanicaz.
+
+rest easy icin jackson provider library dependency si:
+
+    <!-- RESTEasy JAXB Provider -->
+    <!-- https://mvnrepository.com/artifact/org.jboss.resteasy/resteasy-jaxb-provider -->
+    <dependency>
+    	<groupId>org.jboss.resteasy</groupId>
+    	<artifactId>resteasy-jackson-provider</artifactId>
+    	<version>${resteasy.version}</version>
+    </dependency>
+
+her rest easy version inin kendi jackson provider i oldugunu unutmamak lazim ayni jaxb de oldugu gibi
+
+person doneceksen response header koyman lazim
+@Produces(MediaType.APPLICATION_JSON)
+
+jackson icin ozel bir annotation kullanmamiza gerek kalmiyor. direk olarak servlet container (rest easy) java object ini
+json a cevirir. bunu yaparken jaxb resource un varsa onun calismasini da bozmaz.
+
+cevirme islemi produces annotation i ile saglaniyor, onu cikarirsak servlet container object i json a cevirmiyor.
+
+
+
+JSON and Jettison
+
+jettison java objet - json marshalling ve unmarshalling yapar. ama burada java object i jaxb annotation larina sahip
+olabilir. jettison kutuphanesi de onlari anlamlandirarak json object i olusturur.
+
+yeni bir dependency eklemek lazim: 
+
+    <dependency>
+    	<groupId>org.jboss.resteasy</groupId>
+    	<artifactId>resteasy-jettison-provider</artifactId>
+    	<version>${resteasy.version}</version>
+    </dependency>	
+    
+burada jackson library sini kaldirmak gerekir yoksa cakismalar olacaktir.
+
+Server Response code 
+
+
+javax.ws.rs.core.Response
+
+Response icin kullanilir, abstract class dir. ResponseBuilder class i uzerinden olusturulabilirler.
+
+    	@Path("/name")
+    	public Response getPersonNameById() {
+    		String personName = "Levent";
+    		ResponseBuilder builder = Response.ok(personName);
+    		// add header
+    		builder.header("myHeader", "myHeaderValue");
+    		// add cookie
+    		builder.cookie(new NewCookie("myCookie", "myCookieValue"));
+    		return builder.build();
+    	}
+    	
+here we create a response has:
+    200 OK 
+    new header
+    cookie
+by using
+
+WebApplicationException
+
+web uygulamamiz kullaniciya uygun response donebilir ya da exception ile duruma uygun bilgilendirme yapilabilir.
+
+Eger atilan exception lar icin exception mapper tanimlandiysa, uygulamadan atilan exception lar mapper tarafindan
+yakalanirlar. Uygulamaya gore kullaniciya donus yapilir.
+
+WebApplicationException ve turev class lari ise exception mapper class ina gerek duymadan servlet container tarafindan
+yakalanirlar. Yakalandiginda ise getResponse method u kullaniciya status code u ile gonderilirler.
+
+Exception mapper i olmayan class lar ise container tarafindan handle edilirler ve direk olarak 500 response code ve
+exception icerigiyle kullaniciya donulurler.
+
+WebApplicationException 
+
+Cok basit olarak bir ornek yapalim;
+bir class service imiz olsun, eger istenilen id de customer bulamazsa 404 not found donsun
+bir method da not implemented (501) donsun. yani service daha yazilmamis anlamina gelen response code
+WebApplicationException RuntimeException dan turemistir.
+
+    	@GET
+    	@Path("/customer/{id}")
+    	public Customer getCustomer(@PathParam("id") int id) {
+            System.out.println("getCustomer is called....");
+            CustomerService service = new CustomerService();
+    
+    		Customer customer = service.findCustomer(id);
+    		if (customer == null) {
+    			throw new WebApplicationException(Response.Status.NOT_FOUND);
+    		}
+    		return customer;
+    	}
+    
+    	@GET
+    	@Path("/name/{id}")
+    	public String getCustomerName(@PathParam("id") int id) {
+            System.out.println("getCustomerName is called...");
+    		throw new WebApplicationException(Response.Status.NOT_IMPLEMENTED);
+    	}
+
+Exception Mappers
+web application imiz exception atacak sekilde olusturabiliriz ve bu exception lari da exception mapper class inda 
+yakalayip orada ilgili alanlari kullanarak javax.ws.rs.Response class i olusturabiliriz.
+
+uygun bir uygulama olarak RunTimeException dan kendi exception larimizi turetebiliriz.
+bu sekilde method signature larina exception lari eklememize gerek kalmaz. ne de olsa exception mapper da yakalayacagiz. 
+
+ornek olarak CustomerNotFoundException olusturalim, RunTimeException dan turetelim
+
+son olarak bu exception mapper class ini da servlet container a bildirmemiz lazim. Onun icin de RestApplication sinifina
+bu class i diger resource lar gibi eklememiz gerekir.
+
+yeni exception class i ve mapper yazmak yerine jax-rs in bizim icin gelistirdigi exception lari kullanabiliriz.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
