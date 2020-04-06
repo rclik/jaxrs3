@@ -2,7 +2,6 @@ package com.rcelik.jaxrs.annotation.beanparam;
 
 
 import javax.ws.rs.MatrixParam;
-import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 
